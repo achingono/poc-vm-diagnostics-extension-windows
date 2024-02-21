@@ -1,0 +1,837 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.25.53.49325",
+      "templateHash": "14643177237843550382"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20,
+      "metadata": {
+        "description": "Name of the the environment which is used to generate a short unique hash used in all resources."
+      }
+    },
+    "location": {
+      "type": "string"
+    },
+    "uniqueSuffix": {
+      "type": "string"
+    },
+    "adminUsername": {
+      "type": "securestring"
+    },
+    "adminPassword": {
+      "type": "securestring"
+    }
+  },
+  "variables": {
+    "resourceName": "[format('{0}-{1}', parameters('name'), parameters('uniqueSuffix'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2020-06-01",
+      "name": "[format('rg-{0}-{1}', variables('resourceName'), parameters('location'))]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "azd-env-name": "[parameters('name')]"
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}--publicIPAddress', deployment().name)]",
+      "resourceGroup": "[format('rg-{0}-{1}', variables('resourceName'), parameters('location'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('resourceName')]"
+          },
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), '2020-06-01', 'full').location]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.25.53.49325",
+              "templateHash": "13436900062324953912"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "Standard"
+            },
+            "skuTier": {
+              "type": "string",
+              "defaultValue": "Regional"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2022-11-01",
+              "name": "[format('ip-{0}', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "[parameters('skuName')]",
+                "tier": "[parameters('skuTier')]"
+              },
+              "properties": {
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Static",
+                "ddosSettings": {
+                  "protectionMode": "VirtualNetworkInherited"
+                },
+                "dnsSettings": {
+                  "domainNameLabel": "[parameters('name')]"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}--virtualNetwork', deployment().name)]",
+      "resourceGroup": "[format('rg-{0}-{1}', variables('resourceName'), parameters('location'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('resourceName')]"
+          },
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), '2020-06-01', 'full').location]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.25.53.49325",
+              "templateHash": "6687385681054417569"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2022-11-01",
+              "name": "[format('vnet-{0}', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "10.0.0.0/16"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "default",
+                    "properties": {
+                      "addressPrefix": "10.0.2.0/24",
+                      "privateEndpointNetworkPolicies": "Disabled",
+                      "privateLinkServiceNetworkPolicies": "Enabled"
+                    }
+                  }
+                ],
+                "enableDdosProtection": false
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}--networkSecurityGroup', deployment().name)]",
+      "resourceGroup": "[format('rg-{0}-{1}', variables('resourceName'), parameters('location'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('resourceName')]"
+          },
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), '2020-06-01', 'full').location]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.25.53.49325",
+              "templateHash": "1367130784248323208"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2022-11-01",
+              "name": "[format('nsg-{0}', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "securityRules": [
+                  {
+                    "name": "AllowAnyRDPInbound",
+                    "properties": {
+                      "protocol": "TCP",
+                      "sourcePortRange": "*",
+                      "destinationPortRange": "3389",
+                      "sourceAddressPrefix": "*",
+                      "destinationAddressPrefix": "*",
+                      "access": "Allow",
+                      "priority": 100,
+                      "direction": "Inbound"
+                    }
+                  },
+                  {
+                    "name": "AllowAnyWinRMInbound",
+                    "properties": {
+                      "protocol": "TCP",
+                      "sourcePortRange": "*",
+                      "destinationPortRange": "5986",
+                      "sourceAddressPrefix": "*",
+                      "destinationAddressPrefix": "*",
+                      "access": "Allow",
+                      "priority": 110,
+                      "direction": "Inbound"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}--networkInterface', deployment().name)]",
+      "resourceGroup": "[format('rg-{0}-{1}', variables('resourceName'), parameters('location'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('resourceName')]"
+          },
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), '2020-06-01', 'full').location]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.25.53.49325",
+              "templateHash": "16906666584515933334"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "Basic"
+            },
+            "skuTier": {
+              "type": "string",
+              "defaultValue": "Regional"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2022-05-01",
+              "name": "[format('nic-{0}', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "default",
+                    "type": "Microsoft.Network/networkInterfaces/ipConfigurations",
+                    "properties": {
+                      "publicIPAddress": {
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('ip-{0}', parameters('name')))]",
+                        "properties": {
+                          "deleteOption": "Detach"
+                        },
+                        "sku": {
+                          "name": "[parameters('skuName')]",
+                          "tier": "[parameters('skuTier')]"
+                        }
+                      },
+                      "subnet": {
+                        "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('name'))), '2022-11-01').subnets[0].id]"
+                      },
+                      "primary": true,
+                      "privateIPAddressVersion": "IPv4"
+                    }
+                  }
+                ],
+                "networkSecurityGroup": {
+                  "id": "[resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}', parameters('name')))]"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), 'Microsoft.Resources/deployments', format('{0}--networkSecurityGroup', deployment().name))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), 'Microsoft.Resources/deployments', format('{0}--publicIPAddress', deployment().name))]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location')))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), 'Microsoft.Resources/deployments', format('{0}--virtualNetwork', deployment().name))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}--storage', deployment().name)]",
+      "resourceGroup": "[format('rg-{0}-{1}', variables('resourceName'), parameters('location'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('resourceName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.25.53.49325",
+              "templateHash": "16406143830891415015"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "defaultValue": "StorageV2"
+            },
+            "sku": {
+              "type": "string",
+              "defaultValue": "Standard_LRS"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2021-06-01",
+              "name": "[format('stg{0}', replace(parameters('name'), '-', ''))]",
+              "location": "[parameters('location')]",
+              "kind": "[parameters('kind')]",
+              "sku": {
+                "name": "[parameters('sku')]"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}--vm', deployment().name)]",
+      "resourceGroup": "[format('rg-{0}-{1}', variables('resourceName'), parameters('location'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('resourceName')]"
+          },
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), '2020-06-01', 'full').location]"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.25.53.49325",
+              "templateHash": "17595630875305943409"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "size": {
+              "type": "string",
+              "defaultValue": "Standard_D4ads_v5"
+            },
+            "publisher": {
+              "type": "string",
+              "defaultValue": "MicrosoftWindowsServer"
+            },
+            "offer": {
+              "type": "string",
+              "defaultValue": "WindowsServer"
+            },
+            "sku": {
+              "type": "string",
+              "defaultValue": "2022-Datacenter"
+            },
+            "version": {
+              "type": "string",
+              "defaultValue": "latest"
+            },
+            "adminUsername": {
+              "type": "securestring"
+            },
+            "adminPassword": {
+              "type": "securestring"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2023-03-01",
+              "name": "[format('vm-{0}', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "[parameters('size')]"
+                },
+                "storageProfile": {
+                  "imageReference": {
+                    "publisher": "[parameters('publisher')]",
+                    "offer": "[parameters('offer')]",
+                    "sku": "[parameters('sku')]",
+                    "version": "[parameters('version')]"
+                  },
+                  "osDisk": {
+                    "createOption": "FromImage",
+                    "caching": "ReadWrite",
+                    "deleteOption": "Delete"
+                  },
+                  "dataDisks": []
+                },
+                "osProfile": {
+                  "computerName": "[take(parameters('name'), 15)]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "adminPassword": "[parameters('adminPassword')]",
+                  "windowsConfiguration": {
+                    "provisionVMAgent": true,
+                    "enableAutomaticUpdates": true,
+                    "patchSettings": {
+                      "patchMode": "AutomaticByOS",
+                      "assessmentMode": "ImageDefault",
+                      "enableHotpatching": false
+                    },
+                    "enableVMAgentPlatformUpdates": false
+                  },
+                  "secrets": [],
+                  "allowExtensionOperations": true
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('nic-{0}', parameters('name')))]",
+                      "properties": {
+                        "deleteOption": "Detach"
+                      }
+                    }
+                  ]
+                },
+                "diagnosticsProfile": {
+                  "bootDiagnostics": {
+                    "enabled": true,
+                    "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', format('stg{0}', replace(parameters('name'), '-', ''))), '2021-06-01').primaryEndpoints.blob]"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), 'Microsoft.Resources/deployments', format('{0}--networkInterface', deployment().name))]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location')))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), 'Microsoft.Resources/deployments', format('{0}--storage', deployment().name))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}--blob', deployment().name)]",
+      "resourceGroup": "[format('rg-{0}-{1}', variables('resourceName'), parameters('location'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('resourceName')]"
+          },
+          "blobName": {
+            "value": "[parameters('name')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.25.53.49325",
+              "templateHash": "14353211435483157985"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "blobName": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}/{2}', format('stg{0}', replace(parameters('name'), '-', '')), 'default', parameters('blobName'))]"
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', format('stg{0}', replace(parameters('name'), '-', '')))]",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.Compute/virtualMachines', format('vm-{0}', parameters('name'))), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0c867c2a-1d8c-454a-a3db-ab2ea1bdc8bb'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0c867c2a-1d8c-454a-a3db-ab2ea1bdc8bb')]",
+                "principalId": "[reference(resourceId('Microsoft.Compute/virtualMachines', format('vm-{0}', parameters('name'))), '2023-03-01', 'full').identity.principalId]"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location')))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), 'Microsoft.Resources/deployments', format('{0}--storage', deployment().name))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), 'Microsoft.Resources/deployments', format('{0}--vm', deployment().name))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}--share', deployment().name)]",
+      "resourceGroup": "[format('rg-{0}-{1}', variables('resourceName'), parameters('location'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('resourceName')]"
+          },
+          "shareName": {
+            "value": "[parameters('name')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.25.53.49325",
+              "templateHash": "16873780781808585333"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "shareName": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}', format('stg{0}', replace(parameters('name'), '-', '')), 'default')]"
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}/{2}', format('stg{0}', replace(parameters('name'), '-', '')), 'default', parameters('shareName'))]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', format('stg{0}', replace(parameters('name'), '-', '')), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', format('stg{0}', replace(parameters('name'), '-', '')))]",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.Compute/virtualMachines', format('vm-{0}', parameters('name'))), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0c867c2a-1d8c-454a-a3db-ab2ea1bdc8bb'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0c867c2a-1d8c-454a-a3db-ab2ea1bdc8bb')]",
+                "principalId": "[reference(resourceId('Microsoft.Compute/virtualMachines', format('vm-{0}', parameters('name'))), '2023-03-01', 'full').identity.principalId]"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location')))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), 'Microsoft.Resources/deployments', format('{0}--storage', deployment().name))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), 'Microsoft.Resources/deployments', format('{0}--vm', deployment().name))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}--shutdown', deployment().name)]",
+      "resourceGroup": "[format('rg-{0}-{1}', variables('resourceName'), parameters('location'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('resourceName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.25.53.49325",
+              "templateHash": "8667223361253377512"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]"
+            },
+            "shutdownTime": {
+              "type": "string",
+              "defaultValue": "0000"
+            },
+            "timeZoneId": {
+              "type": "string",
+              "defaultValue": "Eastern Standard Time"
+            },
+            "emailRecipient": {
+              "type": "string",
+              "defaultValue": "admin@contoso.com"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.DevTestLab/schedules",
+              "apiVersion": "2018-09-15",
+              "name": "[format('shutdown-computevm-vm-{0}', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "status": "Enabled",
+                "notificationSettings": {
+                  "status": "Enabled",
+                  "timeInMinutes": 60,
+                  "notificationLocale": "en",
+                  "emailRecipient": "[parameters('emailRecipient')]"
+                },
+                "dailyRecurrence": {
+                  "time": "[parameters('shutdownTime')]"
+                },
+                "timeZoneId": "[parameters('timeZoneId')]",
+                "taskType": "ComputeVmShutdownTask",
+                "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines', format('vm-{0}', parameters('name')))]"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location')))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), 'Microsoft.Resources/deployments', format('{0}--vm', deployment().name))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}--command', deployment().name)]",
+      "resourceGroup": "[format('rg-{0}-{1}', variables('resourceName'), parameters('location'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('resourceName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.25.53.49325",
+              "templateHash": "16202335163906774503"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "$fxv#0": "param (\n    [Parameter(Mandatory=$true)]\n    [string] $siteName = \"\",\n    [Parameter(Mandatory=$false)]\n    [string] $applicationPool = \"\",\n    [Parameter(Mandatory=$false)]\n    [string] $downloadPath = \"C:\\Install\\Features\",\n    [Parameter(Mandatory=$false)]\n    [string] $logPath = \"C:\\Install\\Logs\"\n)\n\nif ($null -eq $applicationPool -or \"\" -eq $applicationPool) {\n    $applicationPool = $siteName;\n}\n$siteFolder = \"C:\\inetpub\\$siteName\";\n$sitePath = \"IIS:\\Sites\\$siteName\";\n$applicationPoolPath = \"IIS:\\AppPools\\$applicationPool\";\n\nmkdir $siteFolder\nmkdir $downloadPath;\nmkdir $logPath;\n$ProgressPreference = 'SilentlyContinue'; \n\n# Add Windows Features\nAdd-WindowsFeature Web-Server, `\n                   NET-Framework-45-ASPNET, `\n                   Web-Asp-Net45; \n&$Env:windir\\Microsoft.NET\\Framework64\\v4.0.30319\\ngen update; \n&$Env:windir\\Microsoft.NET\\Framework\\v4.0.30319\\ngen update;\n\n# Install Windows Features\nInstall-WindowsFeature Web-ASP, `\n                       Web-CGI, `\n                       Web-ISAPI-Ext, `\n                       Web-ISAPI-Filter, `\n                       Web-Includes, `\n                       Web-HTTP-Errors, `\n                       Web-Common-HTTP, `\n                       Web-Performance, `\n                       WAS, `\n                       Web-Mgmt-Console, `\n                       Web-Mgmt-Service, `\n                       Web-Scripting-Tools;\n\n# Enable IIS Features\nEnable-WindowsOptionalFeature -Online -NoRestart -FeatureName IIS-DefaultDocument, `\n                                                              IIS-HttpErrors;\n# Enable IIS Remote Management\nEnable-WindowsOptionalFeature -Online -NoRestart -FeatureName IIS-ManagementService;\n# Enable remote management for IIS\nSet-ItemProperty -Path HKLM:\\\\SOFTWARE\\\\Microsoft\\\\WebManagement\\\\Server -Name EnableRemoteManagement -Value 1 -Force\nSet-ItemProperty -Path HKLM:\\\\SOFTWARE\\\\Microsoft\\\\WebManagement\\\\Server -Name EnableLogging -Value 1 -Force\nSet-ItemProperty -Path HKLM:\\\\SOFTWARE\\\\Microsoft\\\\WebManagement\\\\Server -Name TracingEnabled -Value 1 -Force\n# Set IIS Remote Management Service to start automatically\nSet-Service -Name WMSVC -StartupType Automatic;\n# Start IIS Remote Management Service\nStart-Service -Name WMSVC;\n\n# Install C++ 2017 distributions\n#Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://vcredist.com/install.ps1'));\nInvoke-WebRequest 'https://aka.ms/vs/17/release/vc_redist.x64.exe' -OutFile \"$downloadPath\\vc_redist.x64.exe\" -UseBasicParsing;\nUnblock-File \"$downloadPath\\vc_redist.x64.exe\";\nStart-Process -FilePath \"$downloadPath\\vc_redist.x64.exe\" -Wait -ArgumentList \"/install /quiet /norestart /log `\"$logPath\\vc_redist.x64.log`\"\" -PassThru | Wait-Process;\n\nInvoke-WebRequest 'https://aka.ms/vs/17/release/vc_redist.x86.exe' -OutFile \"$downloadPath\\vc_redist.x86.exe\" -UseBasicParsing;\nUnblock-File \"$downloadPath\\vc_redist.x86.exe\";\nStart-Process -FilePath \"$downloadPath\\vc_redist.x86.exe\" -Wait -ArgumentList \"/install /quiet /norestart /log `\"$logPath\\vc_redist.x86.log`\"\" -PassThru | Wait-Process;\n\n# Install ODBC Driver\n#Invoke-WebRequest 'https://download.microsoft.com/download/c/5/4/c54c2bf1-87d0-4f6f-b837-b78d34d4d28a/en-US/18.2.1.1/x64/msodbcsql.msi' -OutFile \"$downloadPath\\msodbcsql18.msi\";\n#Start-Process \"$PSScriptRoot\\msodbcsql18.msi\" 'IACCEPTMSOLEDBSQLLICENSETERMS=YES /qn' -PassThru | Wait-Process;\nInvoke-WebRequest 'https://download.microsoft.com/download/f/1/3/f13ce329-0835-44e7-b110-44decd29b0ad/en-US/19.3.1.0/x64/msoledbsql.msi' -OutFile \"$downloadPath\\msodbcsql19.msi\" -UseBasicParsing;\nUnblock-File \"$downloadPath\\msodbcsql19.msi\";\nStart-Process msiexec.exe -Wait -ArgumentList \"/i `\"$downloadPath\\msodbcsql19.msi`\" IACCEPTMSOLEDBSQLLICENSETERMS=YES /qn /L*V `\"$logPath\\msodbcsql19.log`\"\" -PassThru | Wait-Process;\n\n# Install IIS Rewrite Module\nInvoke-WebRequest 'https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi' -OutFile \"$downloadPath\\rewrite_amd64_en-US.msi\" -UseBasicParsing;\nUnblock-File \"$downloadPath\\rewrite_amd64_en-US.msi\";\nStart-Process msiexec.exe -Wait -ArgumentList \"/i `\"$downloadPath\\rewrite_amd64_en-US.msi`\" /qn /L*V `\"$logPath\\rewrite_amd64_en-US.log`\"\" -PassThru | Wait-Process;\n\n# Install Web Deploy\nInvoke-WebRequest 'https://download.microsoft.com/download/0/1/D/01DC28EA-638C-4A22-A57B-4CEF97755C6C/WebDeploy_amd64_en-US.msi' -OutFile \"$downloadPath\\WebDeploy_amd64_en-US.msi\" -UseBasicParsing;\nUnblock-File \"$downloadPath\\WebDeploy_amd64_en-US.msi\";\n# https://serverfault.com/a/233786\nStart-Process msiexec.exe -Wait -ArgumentList \"/i `\"$downloadPath\\WebDeploy_amd64_en-US.msi`\" ADDLOCAL=ALL /qn /L*V `\"$logPath\\WebDeploy_amd64_en-US.log`\" LicenseAccepted=`\"0`\"\" -PassThru | Wait-Process;\n\n# Unlock IIS Configuration sections\n& c:\\windows\\system32\\inetsrv\\appcmd.exe unlock config /section:system.webServer/asp;\n& c:\\windows\\system32\\inetsrv\\appcmd.exe unlock config /section:system.webServer/handlers;\n& c:\\windows\\system32\\inetsrv\\appcmd.exe unlock config /section:system.webServer/modules;\n\n# Enable Fusion Logs\n# https://stackoverflow.com/a/33013110\nSet-ItemProperty -Path HKLM:\\\\Software\\\\Microsoft\\\\Fusion -Name ForceLog         -Value 1               -Type DWord;\nSet-ItemProperty -Path HKLM:\\\\Software\\\\Microsoft\\\\Fusion -Name LogFailures      -Value 1               -Type DWord;\nSet-ItemProperty -Path HKLM:\\\\Software\\\\Microsoft\\\\Fusion -Name LogResourceBinds -Value 1               -Type DWord;\nSet-ItemProperty -Path HKLM:\\\\Software\\\\Microsoft\\\\Fusion -Name LogPath          -Value 'C:\\inetpub\\logs\\' -Type String;\nmkdir C:\\inetpub\\logs -Force;\n\n# Configure IIS Application Pool\nImport-Module WebAdministration;\nif (-not (Test-Path $applicationPoolPath)) {\n    # Create  Application Pool\n    New-WebAppPool -Name $applicationPool;\n    Set-ItemProperty $applicationPoolPath -Name managedPipelineMode -Value Integrated;\n    Set-ItemProperty $applicationPoolPath -Name managedRuntimeVersion -Value v4.0;\n    Set-ItemProperty $applicationPoolPath -Name enable32BitAppOnWin64 -Value $False;\n    Set-ItemProperty $applicationPoolPath -Name autoStart -Value $true;\n}\nelse {\n    # Configure  Application Pool\n    $pool = Get-Item $applicationPoolPath; \n    $pool.ManagedPipelineMode = 'Integrated'; \n    $pool.ManagedRuntimeVersion = 'v4.0'; \n    $pool.Enable32BitAppOnWin64 = $false; \n    $pool.AutoStart = $true; \n    $pool | Set-Item;\n}\n\nif (-not (Test-Path $sitePath)) {\n    # Change the port for the default web site\n    if ($siteName -ne 'Default Web Site') {\n        Set-ItemProperty \"IIS:\\Sites\\Default Web Site\" -Name bindings -Value @{protocol = \"http\"; bindingInformation = \"*:88:\" };\n    } \n    # Create IIS Web Site\n    New-Website -Name $siteName -PhysicalPath $siteFolder -ApplicationPool $applicationPool;\n}\nelse {\n    # Configure Core Web Site\n    Set-ItemProperty $sitePath -name PhysicalPath -value $siteFolder;\n}\n\n# Create web.config file if it does not exist\nif (-not (Test-Path \"$siteFolder\\web.config\")) {\n\n# Define the XML content as a multi-line string\n$xmlContent = @\"\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<configuration>\n    <appSettings>\n        <add key=\"SQLProvider\" value=\"SQLOLEDB\" />\n        <add key=\"SQLConnectionStringName\" value=\"AzureSql\" />\n    </appSettings>\n    <connectionStrings>\n        <add name=\"AzureSql\" connectionString=\"Server=localhost,1433;Initial Catalog=$siteName;Integrated Security=true;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;\" providerName=\"System.Data.SqlClient\" />\n    </connectionStrings>\n    <system.web>\n        <compilation debug=\"true\" />\n        <customErrors mode=\"Off\" />\n        <sessionState mode=\"InProc\" cookieless=\"false\" timeout=\"20\" />\n    </system.web>\n    <system.webServer>\n        <httpErrors errorMode=\"Detailed\" />\n        <asp appAllowClientDebug=\"True\" appAllowDebugging=\"True\" scriptErrorSentToBrowser=\"True\" enableParentPaths=\"True\">\n            <comPlus appServiceFlags=\"EnableTracker\" />\n            <limits maxRequestEntityAllowed=\"2147483647\" />\n            <session allowSessionState=\"true\" timeout=\"00:20:00\" />\n        </asp>\n    </system.webServer>\n</configuration>\n\"@\n\n# Write the XML content to the web.config file\nSet-Content -Path \"$siteFolder\\web.config\" -Value $xmlContent -Force\n}\n\n# Create default.asp file if it does not exist\nif (-not (Test-Path \"$siteFolder\\default.asp\")) {\n\n# Define the HTML content as a multi-line string\n$aspContent = @\"\n<% Set Shell = CreateObject(\"WScript.Shell\")\nSet Environment = Shell.Environment( \"PROCESS\" ) %>\n<!doctype html>  <head> <meta charset=utf-8> <meta content=\"width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no\"name=viewport> <base \n    href=/ > <title>$siteName</title> <link href=https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css rel=stylesheet> </head> <body> <nav \n    aria-label=\"main navigation\"class=navbar role=navigation> <div class=navbar-brand> <a href=/ class=navbar-item> <img height=28 \n    src=\"https://github.com/achingono/poc-vm-appgateway-sharedsession/blob/main/src/images/secure-scale-logo.png?raw=true\"> </a> </div> <div \n    class=navbar-menu> <div class=navbar-start> <a href=/ class=navbar-item> Home </a> </div> </div> </nav> <div class=container> <section \n    class=\"hero is-large\"> <div class=hero-body> <p class=title> Shared Session Demo (ASP) </p> <p class=subtitle>\n     How to share session between Classic ASP and ASP.Net </p> <p>Coming at you from <%= Environment.Item(\"COMPUTERNAME\") %></p>\n     </div> </section> </div>  <footer class=footer> <div class=\"content has-text-centered\"> <p>\n     <strong>Created</strong> by <a href=https://www.chingono.com>Alfero Chingono</a>. The source code is licensed <a \n    href=http://opensource.org/licenses/mit-license.php>MIT</a>. The website content is licensed <a \n    href=http://creativecommons.org/licenses/by-nc-sa/4.0/ >CC BY NC SA 4.0</a>. </p> </div> </footer> \n\"@ \n\n# Write the ASP content to the default.asp file\nSet-Content -Path \"$siteFolder\\default.asp\" -Value $aspContent -Force\n}\n\n# Set file permissions\ncmd /c icacls $siteFolder /grant:r Everyone:F /t;"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Compute/virtualMachines/runCommands",
+              "apiVersion": "2022-03-01",
+              "name": "[format('{0}/{1}', format('vm-{0}-{1}', parameters('name'), parameters('name')), 'RunPowerShellScript')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "source": {
+                  "script": "[variables('$fxv#0')]"
+                },
+                "parameters": [
+                  {
+                    "name": "siteName",
+                    "value": "[format('{0}-{1}', parameters('name'), parameters('name'))]"
+                  },
+                  {
+                    "name": "applicationPool",
+                    "value": "[replace(format('{0}-{1}', parameters('name'), parameters('name')), '-', '')]"
+                  }
+                ],
+                "outputBlobUri": "[format('{0}{1}/runCommand.log', reference(resourceId('Microsoft.Storage/storageAccounts', format('stg{0}', replace(parameters('name'), '-', ''))), '2021-06-01').primaryEndpoints.blob, parameters('name'))]",
+                "errorBlobUri": "[format('{0}{1}/runCommand.error.log', reference(resourceId('Microsoft.Storage/storageAccounts', format('stg{0}', replace(parameters('name'), '-', ''))), '2021-06-01').primaryEndpoints.blob, parameters('name'))]"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', variables('resourceName'), parameters('location')))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-{1}', variables('resourceName'), parameters('location'))), 'Microsoft.Resources/deployments', format('{0}--vm', deployment().name))]"
+      ]
+    }
+  ]
+}
